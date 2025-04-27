@@ -1,0 +1,678 @@
+openapi: 3.0.4
+
+info:
+  title: Tesla Fleet OpenAPI Spec
+  description: API from Tesla for controlling Tesla Vehicles, Charging and Energy Devices
+  version: "1.0"
+
+servers:
+  - url: https://fleet-api.prd.{region}.vn.cloud.tesla.com
+    variables:
+      region:
+        default: na
+        enum:
+          - cn
+          - eu
+          - na
+  - url: https://fleet-auth.prd.vn.cloud.tesla.com
+    description: Token endpoint for authentication
+
+components:
+  securitySchemes:
+# Attempt 1: to use OpenIdConnect but it didn't work out because the endpoints and scopes in the file aren't correct
+#    OpenIdConnect:
+#      type: openIdConnect
+#      openIdConnectUrl: https://fleet-auth.prd.vn.cloud.tesla.com/oauth2/v3/thirdparty/.well-known/openid-configuration
+# Attempt 2: to use  OAuth2 but again didn't work because (reason?)
+#    OAuth2:
+#      type: oauth2
+#      flows:
+#        authorizationCode:
+#          authorizationUrl: https://fleet-auth.prd.vn.cloud.tesla.com/oauth2/v3/authorize
+#          tokenUrl: https://fleet-auth.prd.vn.cloud.tesla.com/oauth2/v3/token
+#          scopes:
+#            openid: Required to sign in
+#            offline_access: Required to get a refresh token
+#            user_data: Allows access to profile information
+#            vehicle_device_data: Allows access to vehicle information
+#            vehicle_location: Allows access to vehicle location
+#            vehicle_cmds: Allows access to vehicle commands
+#            vehicle_charging_cmds: Allows access to vehicle charging management
+#            energy_device_data: Allows access to energy device information
+#            energy_cmds: Allows access to energy device commands
+# Attempt 3: to use Bearer authentication does work but it's not great as it relies on having already retrieved a token
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: "Bearer token for authentication.  You will need to authorize the user and then swap the token for an access token to use this API.  See https://developer.tesla.com/docs/fleet-api/authentication/third-party-tokens"
+  responses:
+    BadRequest:
+      description: |
+        Bad Request
+
+        The request was malformed or invalid.
+    Unauthorized:
+      description: |
+        Unauthorized
+
+        The Authorization Bearer Token header has not been set to a correct token value.
+    Forbidden:
+      description: |
+        Forbidden
+
+        User does not have adequate access rights
+    NotFound:
+      description: The specified resource was not found
+  schemas:
+    RefreshAccessTokenRequest:
+      title: Refresh Access Token request
+      #required:
+      #  - client_id
+      #  - code
+      #  - grant_type
+      type: object
+      properties:
+        grant_type:
+          type: string
+          description: The grant type for the token request.
+          default: refresh_token
+        client_id:
+          type: string
+          description: The client id of the application.
+          example: 1234567890abcdef1234567890abcdef
+        refresh_token:
+          type: string
+          description: The authorization code returned from the authorization endpoint.
+          example: 1234567890abcdef1234567890abcdef
+    CreateAccessTokenRequest:
+      #required:
+      #  - grant_type
+      #  - client_id
+      #  - client_secret
+      #  - code
+      #  - audience
+      #  - redirect_uri
+      type: object
+      properties:
+        grant_type:
+          type: string
+          description: The grant type for the token request.
+          default: authorization_code
+        client_id:
+          type: string
+          description: The client id of the application.
+          example: 1234567890abcdef1234567890abcdef
+        client_secret:
+          type: string
+          description: The client secret of the application.
+          example: 1234567890abcdef1234567890abcdef
+        code:
+          type: string
+          description: The authorization code returned from the authorization endpoint.
+          example: 1234567890abcdef1234567890abcdef
+        audience:
+          type: string
+          description: The audience for the token request.
+          example: https://fleet-api.prd.vn.cloud.tesla.com/
+        redirect_uri:
+          type: string
+          description: The redirect uri for the token request.
+          example: https://example.com/callback
+    AccessTokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: The access token for the API.
+          example: eyetc
+        refresh_token:
+          type: string
+          description: The refresh token for the API.
+          example: eyetc
+        id_token:
+          type: string
+          description: The id token for the API.
+          example: eyJhbGci
+        expires_in:
+          type: integer
+          description: The expiration time of the access token in seconds.
+          example: 28800
+        state:
+          type: string
+          description: The state parameter for the token request.
+          example: 1234567890abcdef1234567890abcdef
+        token_type:
+          type: string
+          description: The type of the token.
+          example: Bearer
+    GetProductsResponse:
+      title: List all Products response
+      type: object
+      properties:
+        response:
+          type: object
+          properties:
+            response:
+              type: array
+              items:
+                anyOf:
+                  - type: object
+                    properties:
+                      energy_site_id:
+                        type: integer
+                        format: int32
+                      device_type:
+                        type: string
+                      resource_type:
+                        type: string
+                      site_name:
+                        type: string
+                      id:
+                        type: string
+                      gateway_id:
+                        type: string
+                      asset_site_id:
+                        type: string
+                      warp_site_number:
+                        type: string
+                      percentage_charged:
+                        type: number
+                        format: double
+                      battery_type:
+                        type: string
+                      battery_power:
+                        type: number
+                        format: double
+                      go_off_grid_test_banner_enabled:
+                        type: boolean
+                      storm_mode_enabled:
+                        type: boolean
+                      powerwall_onboarding_settings_set:
+                        type: boolean
+                      powerwall_tesla_electric_interested_in:
+                        type: boolean
+                      vpp_tour_enabled:
+                        type: boolean
+                      components:
+                        type: object
+                        properties:
+                          battery:
+                            type: boolean
+                          battery_type:
+                            type: string
+                          solar:
+                            type: boolean
+                          grid:
+                            type: boolean
+                          load_meter:
+                            type: boolean
+                          market_type:
+                            type: string
+                          gateways:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/EnergyGateway'
+                      charge_on_solar_capable:
+                        type: boolean
+                      features:
+                        type: object
+                        properties:
+                          rate_plan_manager_no_pricing_constraint:
+                            type: boolean
+        count:
+          type: integer
+          format: int32
+          example: 1
+      example:
+        response:
+          - energy_site_id: 1234567890
+            device_type: Powerwall
+            resource_type: Powerwall
+            site_name: My Energy Site
+            id: 1234567890
+            gateway_id: 1234567890
+        count: 1
+    EnergyLiveStatusResponse:
+      title: Energy Live Status response
+      type: object
+      properties:
+        response:
+          type: object
+          properties:
+            solar_power:
+              type: number
+              format: double
+            percentage_charged:
+              type: number
+              format: double
+            battery_power:
+              type: number
+              format: double
+            load_power:
+              type: number
+              format: double
+            grid_status:
+              type: string
+            grid_power:
+              type: number
+              format: double
+            generator_power:
+              type: number
+              format: double
+            wall_connectors:
+              type: array
+              items:
+                type: object
+            island_status:
+              type: string
+            storm_mode_active:
+              type: boolean
+            timestamp:
+              type: string
+    EnergySiteInfoResponse:
+      title: Energy Site Info response
+      type: object
+      properties:
+        response:
+          type: object
+          properties:
+            id:
+              type: string
+            site_name:
+              type: string
+            backup_reserve_percent:
+              type: integer
+            default_real_mode:
+              type: string
+            installation_date:
+              type: string
+            user_settings:
+              type: object
+              properties:
+                go_off_grid_test_banner_enabled:
+                  type: boolean
+                storm_mode_enabled:
+                  type: boolean
+                powerwall_onboarding_settings_set:
+                  type: boolean
+                powerwall_tesla_electric_interested_in:
+                  type: boolean
+                vpp_tour_enabled:
+                  type: boolean
+                off_grid_vehicle_charging_enabled:
+                  type: boolean
+            app_settings:
+              type: object
+              properties:
+                live_status_local_refresh_s:
+                  type: integer
+            components:
+              type: object
+              properties:
+                solar:
+                  type: boolean
+                battery:
+                  type: boolean
+                grid:
+                  type: boolean
+                backup:
+                  type: boolean
+                gateway:
+                  type: string
+                load_meter:
+                  type: boolean
+                tou_capable:
+                  type: boolean
+                storm_mode_capable:
+                  type: boolean
+                off_grid_vehicle_charging_reserve_supported:
+                  type: boolean
+                vehicle_charging_performance_view_enabled:
+                  type: boolean
+                vehicle_charging_solar_offset_view_enabled:
+                  type: boolean
+                battery_solar_offset_view_enabled:
+                  type: boolean
+                solar_value_enabled:
+                  type: boolean
+                energy_value_header:
+                  type: string
+                energy_value_subheader:
+                  type: string
+                energy_service_self_scheduling_enabled:
+                  type: boolean
+                show_battery_soe_graph:
+                  type: boolean
+                show_grid_import_battery_source_cards:
+                  type: boolean
+                wifi_commissioning_enabled:
+                  type: boolean
+                backup_time_remaining_enabled:
+                  type: boolean
+                battery_type:
+                  type: string
+                configurable:
+                  type: boolean
+                grid_services_enabled:
+                  type: boolean
+                gateways:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EnergyGateway'
+                batteries:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EnergyBattery'
+                edit_setting_permission_to_export:
+                  type: boolean
+                edit_setting_grid_charging:
+                  type: boolean
+                edit_setting_energy_exports:
+                  type: boolean
+                system_alerts_enabled:
+                  type: boolean
+                service_mode_enabled:
+                  type: boolean
+                support_manual_backup:
+                  type: boolean
+            version:
+              type: string
+            battery_count:
+              type: integer
+            tariff_content:
+              $ref: '#/components/schemas/EnergyTariffContent'
+            nameplate_power:
+              type: number
+              format: double
+            nameplate_energy:
+              type: number
+              format: double
+            installation_time_zone:
+              type: string
+            max_site_meter_power_ac:
+              type: number
+              format: double
+            min_site_meter_power_ac:
+              type: number
+              format: double
+            tariff_content_v2:
+              $ref: '#/components/schemas/EnergyTariffContent'
+            vpp_backup_reserve_percent:
+              type: number
+              format: double
+            island_config:
+              type: object
+    EnergyBattery:
+      type: object
+      properties:
+        device_id:
+          type: string
+        din:
+          type: string
+        serial_number:
+          type: string
+        part_number:
+          type: string
+        part_type:
+          type: string
+        nameplate_max_charge_power:
+          type: number
+          format: double
+        nameplate_max_discharge_power:
+          type: number
+          format: double
+        nameplate_energy:
+          type: number
+          format: double
+        is_active:
+          type: boolean
+    EnergyGateway:
+      type: object
+      properties:
+        device_id:
+          type: string
+        din:
+          type: string
+        serial_number:
+          type: string
+        part_number:
+          type: string
+        is_active:
+          type: boolean
+    EnergySellTariff:
+      type: object
+      properties:
+        name:
+          type: string
+        utility:
+          type: string
+        daily_charges:
+          type: array
+          items:
+            type: object
+            properties:
+              amount:
+                type: number
+              name:
+                type: string
+        demand_charges:
+          type: object
+          properties:
+            ALL:
+              type: object
+              properties:
+                ALL:
+                  type: number
+            Summer:
+              type: object
+            Winter:
+              type: object
+        energy_charges:
+          type: object
+          properties:
+            ALL:
+              type: object
+              properties:
+                ALL:
+                  type: number
+            Summer:
+              type: object
+            Winter:
+              type: object
+        seasons:
+          $ref: '#/components/schemas/EnergySeasons'
+    EnergyTariffContent:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        utility:
+          type: string
+        daily_charges:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+        demand_charges:
+          type: object
+          properties:
+            ALL:
+              type: object
+              properties:
+                rates:
+                  type: object
+                  additionalProperties:
+                    type: number
+            Summer:
+              type: object
+            Winter:
+              type: object
+        energy_charges:
+          type: object
+          properties:
+            ALL:
+              type: object
+              properties:
+                rates:
+                  type: object
+                  additionalProperties:
+                    type: number
+            Summer:
+              type: object
+            Winter:
+              type: object
+        seasons:
+          $ref: '#/components/schemas/EnergySeasons'
+        sell_tariff:
+          $ref: '#/components/schemas/EnergySellTariff'
+    EnergySeasons:
+      type: object
+      properties:
+        name:
+          type: string
+        fromDay:
+          type: integer
+        toDay:
+          type: integer
+        fromMonth:
+          type: integer
+        toMonth:
+          type: integer
+        tou_periods:
+          type: object
+          properties:
+            OFF_PEAK:
+              type: object
+              properties:
+                periods:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EnergyTouPeriod'
+            ON_PEAK:
+              type: object
+              properties:
+                periods:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EnergyTouPeriod'
+    EnergyTouPeriod:
+      type: object
+      properties:
+        fromDayOfWeek:
+          type: integer
+        toDayOfWeek:
+          type: integer
+        fromHour:
+          type: integer
+        fromMinute:
+          type: integer
+        toHour:
+          type: integer
+        toMinute:
+          type: integer
+
+paths:
+  /oauth2/v3/token:
+    # See notes in #components/securitySchemes.  This endpoint shouldn't need to be defined here but it's defined so that it's possible to generate a client that can be used
+    # to swap a code for an access token and refresh a token
+    post:
+      tags:
+        - Authentication
+      summary: Get or refresh an Access Token
+      description: |
+        Get an access token for the Tesla API.  You will need to authorize the user and then swap the token for an access token to use this API.  See https://developer.tesla.com/docs/fleet-api/authentication/third-party-tokens
+
+        This endpoint can also be used to refresh an access token.
+      operationId: AccessToken
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/CreateAccessTokenRequest'
+                - $ref: '#/components/schemas/RefreshAccessTokenRequest'
+      responses:
+        200:
+          description: Access token and optional refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        400:
+          $ref: '#/components/responses/BadRequest'
+  /api/1/products:
+    get:
+      tags:
+        - Energy
+      security:
+        - BearerAuth: []
+      summary: List all products associated with the customer
+      description: Retrieve a list of products you own (includes vehicles not yet shipped!)
+      operationId: GetProducts
+      responses:
+        200:
+          description: A list of products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProductsResponse'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+  /api/1/energy_sites/{energy_site_id}/live_status:
+    get:
+      tags:
+        - Energy
+      security:
+        - BearerAuth: []
+      summary: Returns the live status of the site (power, state of energy, grid status, storm mode)
+      description: |
+        Power values are in watts.
+        Energy values are in watt hours.
+      operationId: GetLiveStatus
+      parameters:
+        - name: energy_site_id
+          in: path
+          description: The id of the Energy Site.
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Live status of the site
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnergyLiveStatusResponse'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+  /api/1/energy_sites/{energy_site_id}/site_info:
+    get:
+      tags:
+        - Energy
+      security:
+        - BearerAuth: []
+      summary: Returns the site information (name, address, etc.)
+      description: |
+        Detailed information about the site
+      operationId: GetSiteInfo
+      parameters:
+        - name: energy_site_id
+          in: path
+          description: The id of the Energy Site.
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Information about the site
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnergySiteInfoResponse'
