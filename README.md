@@ -17,7 +17,7 @@ A copy of the site will be available at https://vls29.github.io/tesla-fleet-open
 To generate a client to interact with the Tesla Fleet APIs, you can use the OpenAPI Generator.  An example of generating a Java client is shown below:
 
 ```bash
-docker run --rm -v ${PWD}:/local openapitools/openapi-generator-cli generate -i /local/openapi.yaml -g java -o /local/open-api-generator-output/java-client
+docker run --rm -v ${PWD}:/local openapitools/openapi-generator-cli generate -i /local/spec.yaml -g java -o /local/open-api-generator-output/java-client
 ```
 
 Or with Maven, something like the following:
